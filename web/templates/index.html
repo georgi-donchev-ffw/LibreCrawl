@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>LibreCrawl - SEO Spider</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v={{ cache_version }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
 </head>
@@ -229,6 +229,7 @@
                                             <th>Content Type</th>
                                             <th>Size</th>
                                             <th>Title</th>
+                                            <th>Linked From</th>
                                         </tr>
                                     </thead>
                                     <tbody id="internalTableBody">
@@ -248,6 +249,7 @@
                                             <th>Content Type</th>
                                             <th>Size</th>
                                             <th>Title</th>
+                                            <th>Linked From</th>
                                         </tr>
                                     </thead>
                                     <tbody id="externalTableBody">
@@ -1005,13 +1007,13 @@
         </div>
     </div>
 
-    <script src="/static/js/incremental_poller.js"></script>
-    <script src="/static/js/virtual-scroller.js"></script>
-    <script src="/static/js/column-resize.js"></script>
-    <script src="/static/js/visualization.js"></script>
-    <script src="/static/js/plugin-loader.js"></script>
-    <script src="/static/js/app.js"></script>
-    <script src="/static/js/dashboard.js"></script>
-    <script src="/static/js/settings.js"></script>
+    <script src="/static/js/incremental_poller.js?v={{ cache_version }}"></script>
+    <script src="/static/js/virtual-scroller.js?v={{ cache_version }}"></script>
+    <script src="/static/js/column-resize.js?v={{ cache_version }}"></script>
+    <script src="/static/js/visualization.js?v={{ cache_version }}"></script>
+    <script src="/static/js/plugin-loader.js?v={{ cache_version }}"></script>
+    <script src="/static/js/app.js?v={{ cache_version }}"></script>
+    <script src="/static/js/dashboard.js?v={{ cache_version }}"></script>
+    <script src="/static/js/settings.js?v={{ cache_version }}"></script>
 </body>
 </html>
