@@ -279,6 +279,13 @@ def generate_csv_export(urls, fields):
                 row[field] = f"{int(value)} internal links" if value else '0 internal links'
             elif field == 'external_links' and isinstance(value, (int, float)):
                 row[field] = f"{int(value)} external links" if value else '0 external links'
+            elif field == 'is_internal':
+                if value is True:
+                    row[field] = 'Internal'
+                elif value is False:
+                    row[field] = 'External'
+                else:
+                    row[field] = ''
             elif field == 'h2' and isinstance(value, list):
                 row[field] = ', '.join(value[:3]) + ('...' if len(value) > 3 else '')
             elif field == 'h3' and isinstance(value, list):
