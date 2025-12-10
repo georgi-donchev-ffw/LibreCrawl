@@ -1002,22 +1002,20 @@ function getRedirectSummary(redirects) {
         return { display: '—', full: '' };
     }
 
-    const statusParts = redirectList
-        .map(step => (step && step.status_code !== undefined && step.status_code !== null) ? String(step.status_code) : '')
-        .filter(Boolean);
+    const urlParts = [];
+    redirectList.forEach(step => {
+        if (!step || typeof step !== 'object') return;
+        const destination = step.to_url || step.location || step.from_url || '';
+        if (destination && urlParts[urlParts.length - 1] !== destination) {
+            urlParts.push(destination);
+        }
+    });
 
-    const finalStep = redirectList[redirectList.length - 1] || {};
-    const finalDestination = finalStep.to_url || '';
-
-    let summary = statusParts.join(' -> ');
-    if (finalDestination) {
-        summary = summary ? `${summary} -> ${finalDestination}` : finalDestination;
-    }
-
-    if (!summary) {
+    if (urlParts.length === 0) {
         return { display: '—', full: '' };
     }
 
+    const summary = urlParts.join(' -> ');
     const displaySummary = summary.length > 140 ? `${summary.slice(0, 137)}...` : summary;
 
     return {
