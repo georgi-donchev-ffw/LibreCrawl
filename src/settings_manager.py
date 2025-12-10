@@ -39,7 +39,8 @@ class SettingsManager:
         #       enableProxy, proxyUrl, customHeaders) are ADMIN ONLY
         extra_settings = user_settings + [
             # Requests tab
-            'userAgent', 'timeout', 'retries', 'acceptLanguage', 'respectRobotsTxt', 'allowCookies',
+            'userAgent', 'timeout', 'retries', 'retryBackoffMin', 'retryBackoffMax',
+            'acceptLanguage', 'respectRobotsTxt', 'allowCookies',
             'discoverSitemaps', 'enablePageSpeed', 'googleApiKey',
             # Filters tab
             'includeExtensions', 'excludeExtensions', 'includePatterns', 'excludePatterns', 'maxFileSize',
@@ -85,6 +86,8 @@ class SettingsManager:
             'userAgent': 'LibreCrawl/1.0 (Web Crawler)',
             'timeout': 10,
             'retries': 3,
+            'retryBackoffMin': 2,
+            'retryBackoffMax': 15,
             'acceptLanguage': 'en-US,en;q=0.9',
             'respectRobotsTxt': True,
             'allowCookies': True,
@@ -426,11 +429,13 @@ class SettingsManager:
             # Validate numeric ranges
             numeric_validations = {
                 'maxDepth': (1, 10),
-            'maxExternalDepth': (0, 5),
+                'maxExternalDepth': (0, 5),
                 'maxUrls': (1, 5000000),
                 'crawlDelay': (0, 60),
                 'timeout': (1, 120),
                 'retries': (0, 10),
+                'retryBackoffMin': (0, 300),
+                'retryBackoffMax': (0, 300),
                 'maxFileSize': (1, 1000),
                 'concurrency': (1, 50),
                 'memoryLimit': (64, 4096),
@@ -447,6 +452,9 @@ class SettingsManager:
                     value = settings[key]
                     if not isinstance(value, (int, float)) or value < min_val or value > max_val:
                         return False
+
+            if settings.get('retryBackoffMin', 0) > settings.get('retryBackoffMax', 0):
+                return False
 
             # Validate string fields are not empty where required
             required_strings = ['userAgent']
@@ -487,6 +495,8 @@ class SettingsManager:
             'user_agent': settings['userAgent'],
             'timeout': settings['timeout'],
             'retries': settings['retries'],
+            'retry_backoff_min': settings['retryBackoffMin'],
+            'retry_backoff_max': settings['retryBackoffMax'],
             'accept_language': settings['acceptLanguage'],
             'respect_robots': settings['respectRobotsTxt'],
             'allow_cookies': settings['allowCookies'],

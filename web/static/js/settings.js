@@ -13,6 +13,8 @@ let defaultSettings = {
     userAgent: 'LibreCrawl/1.0 (Web Crawler)',
     timeout: 10,
     retries: 3,
+    retryBackoffMin: 2,
+    retryBackoffMax: 15,
     acceptLanguage: 'en-US,en;q=0.9',
     respectRobotsTxt: true,
     allowCookies: true,
@@ -474,7 +476,7 @@ function collectSettingsFromForm() {
     // Collect regular form fields
     const formFields = [
         'maxDepth', 'maxUrls', 'crawlDelay', 'followRedirects', 'crawlExternalLinks', 'maxExternalDepth',
-        'userAgent', 'timeout', 'retries', 'acceptLanguage', 'respectRobotsTxt', 'allowCookies', 'discoverSitemaps', 'enablePageSpeed', 'googleApiKey',
+        'userAgent', 'timeout', 'retries', 'retryBackoffMin', 'retryBackoffMax', 'acceptLanguage', 'respectRobotsTxt', 'allowCookies', 'discoverSitemaps', 'enablePageSpeed', 'googleApiKey',
         'includeExtensions', 'excludeExtensions', 'includePatterns', 'excludePatterns', 'maxFileSize',
         'enableDuplicationCheck', 'duplicationThreshold',
         'exportFormat', 'concurrency', 'memoryLimit', 'logLevel', 'saveSession',
@@ -602,6 +604,18 @@ function validateSettings(settings) {
 
     if (settings.retries < 0 || settings.retries > 10) {
         errors.push('Retries must be between 0 and 10');
+    }
+
+    if (settings.retryBackoffMin < 0 || settings.retryBackoffMin > 300) {
+        errors.push('Retry wait minimum must be between 0 and 300 seconds');
+    }
+
+    if (settings.retryBackoffMax < 0 || settings.retryBackoffMax > 300) {
+        errors.push('Retry wait maximum must be between 0 and 300 seconds');
+    }
+
+    if (settings.retryBackoffMin > settings.retryBackoffMax) {
+        errors.push('Retry wait minimum must be less than or equal to maximum');
     }
 
     if (settings.maxFileSize < 1 || settings.maxFileSize > 1000) {

@@ -7,6 +7,7 @@ import threading
 import time
 import asyncio
 import re
+import random
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
@@ -102,6 +103,8 @@ class WebCrawler:
             'user_agent': 'LibreCrawl/1.0 (Web Crawler)',
             'timeout': 10,
             'retries': 3,
+            'retry_backoff_min': 2,
+            'retry_backoff_max': 15,
             'accept_language': 'en-US,en;q=0.9',
             'respect_robots': True,
             'allow_cookies': True,
@@ -783,6 +786,8 @@ class WebCrawler:
         """Crawl a single URL using traditional HTTP requests"""
         print(f"Starting crawl of {url}")
         retries = self.config.get('retries', 3)
+        backoff_min = max(0, self.config.get('retry_backoff_min', 1))
+        backoff_max = max(backoff_min, self.config.get('retry_backoff_max', backoff_min))
         start_time = time.time()
 
         try:
@@ -816,7 +821,10 @@ class WebCrawler:
                 except Exception as e:
                     if attempt >= retries:
                         raise e
-                    time.sleep(1)
+                    delay = random.uniform(backoff_min, backoff_max) if backoff_max > 0 else 0
+                    print(f"Request failed ({e}), retrying in {delay:.2f}s")
+                    if delay > 0:
+                        time.sleep(delay)
 
             # Determine if URL is internal
             is_internal = self.link_manager.is_internal(url)
@@ -1340,7 +1348,8 @@ class WebCrawler:
 
     def _call_pagespeed_api(self, url, strategy='mobile', retries=3):
         """Call Google PageSpeed Insights API"""
-        import random
+        backoff_min = max(0, self.config.get('retry_backoff_min', 1))
+        backoff_max = max(backoff_min, self.config.get('retry_backoff_max', backoff_min))
 
         try:
             api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
@@ -1404,9 +1413,10 @@ class WebCrawler:
 
                     elif response.status_code == 429:
                         if attempt < retries:
-                            delay = (2 ** attempt) * random.uniform(0.5, 1.5)
+                            delay = random.uniform(backoff_min, backoff_max) if backoff_max > 0 else 0
                             print(f"Rate limited, retrying in {delay:.1f} seconds...")
-                            time.sleep(delay)
+                            if delay > 0:
+                                time.sleep(delay)
                             continue
 
                     return {
@@ -1417,7 +1427,10 @@ class WebCrawler:
 
                 except requests.exceptions.RequestException as e:
                     if attempt < retries:
-                        time.sleep(3)
+                        delay = random.uniform(backoff_min, backoff_max) if backoff_max > 0 else 0
+                        print(f"PageSpeed request error ({e}), retrying in {delay:.1f} seconds...")
+                        if delay > 0:
+                            time.sleep(delay)
                         continue
                     return {
                         'success': False,
