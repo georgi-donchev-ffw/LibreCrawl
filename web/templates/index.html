@@ -195,12 +195,13 @@
                             <div class="table-container">
                                 <table class="data-table" id="overviewTable">
                                     <thead>
-                                        <tr>
-                                            <th>Address</th>
-                                            <th>Status</th>
-                                            <th>Title</th>
-                                            <th>Meta Desc</th>
-                                            <th>H1</th>
+                                             <tr>
+                                                 <th>Address</th>
+                                                 <th>Status</th>
+                                                 <th>Redirect Target</th>
+                                                 <th>Title</th>
+                                                 <th>Meta Desc</th>
+                                                 <th>H1</th>
                                             <th>Words</th>
                                             <th>Response (ms)</th>
                                             <th>Analytics</th>
@@ -223,13 +224,14 @@
                             <div class="table-container">
                                 <table class="data-table" id="internalTable">
                                     <thead>
-                                        <tr>
-                                            <th>Address</th>
-                                            <th>Status</th>
-                                            <th>Content Type</th>
-                                            <th>Size</th>
-                                            <th>Title</th>
-                                            <th>Linked From</th>
+                                         <tr>
+                                             <th>Address</th>
+                                             <th>Status</th>
+                                             <th>Redirect Target</th>
+                                             <th>Content Type</th>
+                                             <th>Size</th>
+                                             <th>Title</th>
+                                             <th>Linked From</th>
                                         </tr>
                                     </thead>
                                     <tbody id="internalTableBody">
@@ -243,13 +245,14 @@
                             <div class="table-container">
                                 <table class="data-table" id="externalTable">
                                     <thead>
-                                        <tr>
-                                            <th>Address</th>
-                                            <th>Status</th>
-                                            <th>Content Type</th>
-                                            <th>Size</th>
-                                            <th>Title</th>
-                                            <th>Linked From</th>
+                                         <tr>
+                                             <th>Address</th>
+                                             <th>Status</th>
+                                             <th>Redirect Target</th>
+                                             <th>Content Type</th>
+                                             <th>Size</th>
+                                             <th>Title</th>
+                                             <th>Linked From</th>
                                         </tr>
                                     </thead>
                                     <tbody id="externalTableBody">
@@ -709,10 +712,14 @@
                                 <input type="checkbox" name="exportFields" value="url" checked>
                                 URL
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="exportFields" value="status_code" checked>
-                                Status Code
-                            </label>
+                             <label class="checkbox-label">
+                                 <input type="checkbox" name="exportFields" value="status_code" checked>
+                                 Status Code
+                             </label>
+                             <label class="checkbox-label">
+                                 <input type="checkbox" name="exportFields" value="redirects" checked>
+                                 Redirect Targets
+                             </label>
                             <label class="checkbox-label">
                                 <input type="checkbox" name="exportFields" value="is_internal" checked>
                                 URL Type (Internal/External)

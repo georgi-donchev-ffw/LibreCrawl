@@ -33,7 +33,7 @@ let defaultSettings = {
 
     // Export settings
     exportFormat: 'csv',
-    exportFields: ['url', 'status_code', 'is_internal', 'title', 'meta_description', 'h1', 'word_count', 'response_time', 'analytics', 'og_tags', 'json_ld', 'internal_links', 'external_links', 'images'],
+    exportFields: ['url', 'status_code', 'redirects', 'is_internal', 'title', 'meta_description', 'h1', 'word_count', 'response_time', 'analytics', 'og_tags', 'json_ld', 'internal_links', 'external_links', 'images'],
 
     // Advanced settings
     concurrency: 5,

@@ -105,7 +105,7 @@ class SettingsManager:
 
             # Export settings
             'exportFormat': 'csv',
-            'exportFields': ['url', 'status_code', 'is_internal', 'title', 'meta_description', 'h1'],
+            'exportFields': ['url', 'status_code', 'redirects', 'is_internal', 'title', 'meta_description', 'h1'],
 
             # Advanced settings
             'concurrency': 5,
