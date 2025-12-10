@@ -1251,18 +1251,23 @@ def fetch_html():
         crawler = get_or_create_crawler()
         settings_manager = get_session_settings()
         settings = settings_manager.get_settings()
-        
+
         # Update crawler config with current settings
+        user_agent = settings.get('userAgent', settings.get('user_agent', 'LibreCrawl/1.0'))
+        backoff_min = settings.get('retryBackoffMin', settings.get('retry_backoff_min', 2))
+        backoff_max = settings.get('retryBackoffMax', settings.get('retry_backoff_max', 15))
         crawler.config.update({
             'timeout': settings.get('timeout', 30),
-            'user_agent': settings.get('user_agent', 'LibreCrawl/1.0'),
+            'user_agent': user_agent,
             'follow_redirects': settings.get('follow_redirects', True),
-            'retries': settings.get('retries', 3)
+            'retries': settings.get('retries', 3),
+            'retry_backoff_min': backoff_min,
+            'retry_backoff_max': max(backoff_min, backoff_max)
         })
-        
+
         # Update session headers
-        if settings.get('user_agent'):
-            crawler.session.headers.update({'User-Agent': settings['user_agent']})
+        if user_agent:
+            crawler.session.headers.update({'User-Agent': user_agent})
         
         # Fetch the HTML
         try:
