@@ -820,6 +820,7 @@ class WebCrawler:
 
             # Determine if URL is internal
             is_internal = self.link_manager.is_internal(url)
+            redirect_chain = self._build_redirect_chain(response)
 
             # Create result structure
             result = {
@@ -861,7 +862,7 @@ class WebCrawler:
                 'external_links': 0,
                 'internal_links': 0,
                 'response_time': 0,
-                'redirects': [],
+                'redirects': redirect_chain,
                 'hreflang': [],
                 'schema_org': [],
                 'linked_from': []
@@ -918,6 +919,48 @@ class WebCrawler:
 
         except Exception as e:
             return self.seo_extractor.create_empty_result(url, depth, 0, str(e))
+
+    def _build_redirect_chain(self, response):
+        """Build redirect chain metadata for a requests response"""
+        redirect_chain = []
+        if not response:
+            return redirect_chain
+
+        try:
+            history = list(response.history) if getattr(response, 'history', None) else []
+            if history:
+                full_chain = history + [response]
+                for idx in range(len(full_chain) - 1):
+                    current_resp = full_chain[idx]
+                    next_resp = full_chain[idx + 1]
+                    step = self._create_redirect_step(current_resp, next_resp.url)
+                    if step:
+                        redirect_chain.append(step)
+            elif 300 <= response.status_code < 400:
+                location = response.headers.get('Location')
+                if location:
+                    target_url = urljoin(response.url, location) if response.url else location
+                    step = self._create_redirect_step(response, target_url)
+                    if step:
+                        redirect_chain.append(step)
+        except Exception as e:
+            print(f"Error building redirect chain: {e}")
+
+        return redirect_chain
+
+    def _create_redirect_step(self, response_obj, target_url):
+        """Create a single redirect metadata entry"""
+        if not target_url:
+            return None
+
+        is_internal = self.link_manager.is_internal(target_url) if self.link_manager else True
+
+        return {
+            'status_code': getattr(response_obj, 'status_code', None),
+            'from_url': getattr(response_obj, 'url', None),
+            'to_url': target_url,
+            'is_internal': is_internal
+        }
 
     async def _crawl_url_with_javascript(self, url, depth):
         """Crawl a single URL using JavaScript rendering"""

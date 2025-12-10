@@ -246,6 +246,33 @@ def start_cleanup_thread():
     cleanup_thread.start()
     print("Started crawler instance cleanup thread")
 
+def format_redirect_chain_for_export(redirects):
+    """Convert redirect metadata into a readable string for exports"""
+    if not redirects:
+        return ''
+
+    if isinstance(redirects, str):
+        return redirects
+
+    if not isinstance(redirects, list):
+        return ''
+
+    formatted_steps = []
+    for step in redirects:
+        if not isinstance(step, dict):
+            continue
+        status = step.get('status_code')
+        destination = step.get('to_url') or step.get('location') or ''
+        if status and destination:
+            formatted_steps.append(f"{status} -> {destination}")
+        elif destination:
+            formatted_steps.append(destination)
+        elif status:
+            formatted_steps.append(str(status))
+
+    return ' | '.join(formatted_steps)
+
+
 def generate_csv_export(urls, fields):
     """Generate CSV export content"""
     output = StringIO()
@@ -286,6 +313,8 @@ def generate_csv_export(urls, fields):
                     row[field] = 'External'
                 else:
                     row[field] = ''
+            elif field == 'redirects':
+                row[field] = format_redirect_chain_for_export(value)
             elif field == 'h2' and isinstance(value, list):
                 row[field] = ', '.join(value[:3]) + ('...' if len(value) > 3 else '')
             elif field == 'h3' and isinstance(value, list):

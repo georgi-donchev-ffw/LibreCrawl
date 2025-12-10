@@ -979,6 +979,53 @@ function formatAnalyticsInfo(analytics) {
     return detected.length > 0 ? detected.join(', ') : '';
 }
 
+function getRedirectSummary(redirects) {
+    if (!redirects) {
+        return { display: '—', full: '' };
+    }
+
+    let redirectList = redirects;
+    if (typeof redirectList === 'string') {
+        try {
+            const parsed = JSON.parse(redirectList);
+            redirectList = parsed;
+        } catch (error) {
+            const truncated = redirectList.length > 140 ? `${redirectList.slice(0, 137)}...` : redirectList;
+            return {
+                display: truncated || '—',
+                full: redirectList
+            };
+        }
+    }
+
+    if (!Array.isArray(redirectList) || redirectList.length === 0) {
+        return { display: '—', full: '' };
+    }
+
+    const statusParts = redirectList
+        .map(step => (step && step.status_code !== undefined && step.status_code !== null) ? String(step.status_code) : '')
+        .filter(Boolean);
+
+    const finalStep = redirectList[redirectList.length - 1] || {};
+    const finalDestination = finalStep.to_url || '';
+
+    let summary = statusParts.join(' -> ');
+    if (finalDestination) {
+        summary = summary ? `${summary} -> ${finalDestination}` : finalDestination;
+    }
+
+    if (!summary) {
+        return { display: '—', full: '' };
+    }
+
+    const displaySummary = summary.length > 140 ? `${summary.slice(0, 137)}...` : summary;
+
+    return {
+        display: displaySummary,
+        full: summary
+    };
+}
+
 function addUrlToTable(urlData) {
     // Check if URL already exists to prevent duplicates
     const existingUrl = crawlState.urls.find(u => u.url === urlData.url);
@@ -1660,6 +1707,9 @@ function showUrlDetails(url) {
     const safeContentType = escapeHtml(urlData.content_type) || 'N/A';
     const safeGa4Id = escapeHtml(urlData.analytics?.ga4_id) || 'N/A';
     const safeGtmId = escapeHtml(urlData.analytics?.gtm_id) || 'N/A';
+    const redirectSummary = getRedirectSummary(urlData.redirects);
+    const redirectDisplay = redirectSummary.full || redirectSummary.display || '—';
+    const safeRedirectSummary = escapeHtml(redirectDisplay);
 
     // Create modal content
     const modalContent = `
@@ -1742,6 +1792,7 @@ function showUrlDetails(url) {
                                 <div><strong>Response Time:</strong> ${urlData.response_time || 0}ms</div>
                                 <div><strong>Content Type:</strong> ${safeContentType}</div>
                                 <div><strong>Size:</strong> ${urlData.size || 0} bytes</div>
+                                <div><strong>Redirect Path:</strong> ${safeRedirectSummary}</div>
                             </div>
                         </div>
 
@@ -2189,10 +2240,17 @@ function renderOverviewRow(row, urlData, index) {
     const linksInfo = `${urlData.internal_links || 0}/${urlData.external_links || 0}`;
     const imagesCount = (urlData.images || []).length;
     const jsRendered = urlData.javascript_rendered ? '✅ JS' : '';
+    const redirectSummary = getRedirectSummary(urlData.redirects);
+    const redirectCell = {
+        type: 'redirect',
+        display: redirectSummary.display,
+        full: redirectSummary.full
+    };
 
     const cells = [
         urlData.url,
         urlData.status_code,
+        redirectCell,
         urlData.title || '',
         (urlData.meta_description || '').substring(0, 50) + (urlData.meta_description && urlData.meta_description.length > 50 ? '...' : ''),
         urlData.h1 || '',
@@ -2209,7 +2267,12 @@ function renderOverviewRow(row, urlData, index) {
 
     cells.forEach(cellData => {
         const cell = document.createElement('td');
-        if (typeof cellData === 'string' && cellData.includes('<button')) {
+        if (cellData && typeof cellData === 'object' && cellData.type === 'redirect') {
+            cell.textContent = cellData.display;
+            if (cellData.full && cellData.display !== '—') {
+                cell.title = cellData.full;
+            }
+        } else if (typeof cellData === 'string' && cellData.includes('<button')) {
             cell.innerHTML = cellData;
         } else {
             cell.textContent = cellData;
@@ -2220,8 +2283,8 @@ function renderOverviewRow(row, urlData, index) {
 
 function renderInternalRow(row, urlData, index) {
     // Format linked_from count with clickable text
-    const linkedFromCount = (urlData.linked_from && Array.isArray(urlData.linked_from)) 
-        ? urlData.linked_from.length 
+    const linkedFromCount = (urlData.linked_from && Array.isArray(urlData.linked_from))
+        ? urlData.linked_from.length
         : 0;
     let linkedFromDisplay = '—';
     if (linkedFromCount > 0) {
@@ -2230,9 +2293,17 @@ function renderInternalRow(row, urlData, index) {
         linkedFromDisplay = `<span class="linked-from-link" data-url="${escapedUrlAttr}" style="cursor: pointer; color: #8b5cf6; text-decoration: underline; text-decoration-color: rgba(139, 92, 246, 0.5);" title="Show pages that link to this URL">${countText}</span>`;
     }
 
+    const redirectSummary = getRedirectSummary(urlData.redirects);
+    const redirectCell = {
+        type: 'redirect',
+        display: redirectSummary.display,
+        full: redirectSummary.full
+    };
+
     const cells = [
         urlData.url,
         urlData.status_code,
+        redirectCell,
         urlData.content_type || '',
         urlData.size || 0,
         urlData.title || '',
@@ -2241,7 +2312,12 @@ function renderInternalRow(row, urlData, index) {
 
     cells.forEach((cellData, cellIndex) => {
         const cell = document.createElement('td');
-        if (cellIndex === 5 && typeof cellData === 'string' && cellData.includes('<span')) {
+        if (cellData && typeof cellData === 'object' && cellData.type === 'redirect') {
+            cell.textContent = cellData.display;
+            if (cellData.full && cellData.display !== '—') {
+                cell.title = cellData.full;
+            }
+        } else if (cellIndex === 6 && typeof cellData === 'string' && cellData.includes('<span')) {
             // Last cell with HTML content
             cell.innerHTML = cellData;
             // Add click handler to the entire link span
@@ -2263,8 +2339,8 @@ function renderInternalRow(row, urlData, index) {
 
 function renderExternalRow(row, urlData, index) {
     // Format linked_from count with clickable text
-    const linkedFromCount = (urlData.linked_from && Array.isArray(urlData.linked_from)) 
-        ? urlData.linked_from.length 
+    const linkedFromCount = (urlData.linked_from && Array.isArray(urlData.linked_from))
+        ? urlData.linked_from.length
         : 0;
     let linkedFromDisplay = '—';
     if (linkedFromCount > 0) {
@@ -2273,9 +2349,17 @@ function renderExternalRow(row, urlData, index) {
         linkedFromDisplay = `<span class="linked-from-link" data-url="${escapedUrlAttr}" style="cursor: pointer; color: #8b5cf6; text-decoration: underline; text-decoration-color: rgba(139, 92, 246, 0.5);" title="Show pages that link to this URL">${countText}</span>`;
     }
 
+    const redirectSummary = getRedirectSummary(urlData.redirects);
+    const redirectCell = {
+        type: 'redirect',
+        display: redirectSummary.display,
+        full: redirectSummary.full
+    };
+
     const cells = [
         urlData.url,
         urlData.status_code,
+        redirectCell,
         urlData.content_type || '',
         urlData.size || 0,
         urlData.title || '',
@@ -2284,7 +2368,12 @@ function renderExternalRow(row, urlData, index) {
 
     cells.forEach((cellData, cellIndex) => {
         const cell = document.createElement('td');
-        if (cellIndex === 5 && typeof cellData === 'string' && cellData.includes('<span')) {
+        if (cellData && typeof cellData === 'object' && cellData.type === 'redirect') {
+            cell.textContent = cellData.display;
+            if (cellData.full && cellData.display !== '—') {
+                cell.title = cellData.full;
+            }
+        } else if (cellIndex === 6 && typeof cellData === 'string' && cellData.includes('<span')) {
             // Last cell with HTML content
             cell.innerHTML = cellData;
             // Add click handler to the entire link span
