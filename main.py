@@ -261,14 +261,12 @@ def format_redirect_chain_for_export(redirects):
     for step in redirects:
         if not isinstance(step, dict):
             continue
-        status = step.get('status_code')
-        destination = step.get('to_url') or step.get('location') or ''
-        if status and destination:
-            formatted_steps.append(f"{status} -> {destination}")
-        elif destination:
-            formatted_steps.append(destination)
-        elif status:
-            formatted_steps.append(str(status))
+
+        destination = step.get('to_url') or step.get('location') or step.get('from_url') or ''
+        if destination:
+            # Avoid duplicate entries if crawler recorded identical consecutive URLs
+            if not formatted_steps or formatted_steps[-1] != destination:
+                formatted_steps.append(destination)
 
     return ' | '.join(formatted_steps)
 
