@@ -81,9 +81,16 @@ class LinkManager:
                     clean_url += f"?{parsed_target.query}"
 
                 # Determine if link is internal or external
-                target_domain_clean = parsed_target.netloc.replace('www.', '', 1)
-                base_domain_clean = self.base_domain.replace('www.', '', 1)
-                is_internal = target_domain_clean == base_domain_clean
+                target_domain = parsed_target.netloc.lower()
+                base_domain = self.base_domain.lower() if self.base_domain else ''
+                
+                # Remove 'www.' prefix if present at the start
+                target_domain_clean = target_domain[4:] if target_domain.startswith('www.') else target_domain
+                base_domain_clean = base_domain[4:] if base_domain.startswith('www.') else base_domain
+                
+                # Only consider internal if both domains are non-empty and match
+                is_internal = (target_domain_clean and base_domain_clean and 
+                              target_domain_clean == base_domain_clean)
 
                 # Find the status of the target URL if we've crawled it
                 target_status = None
@@ -212,9 +219,17 @@ class LinkManager:
     def is_internal(self, url):
         """Check if URL is internal to the base domain"""
         parsed_url = urlparse(url)
-        url_domain_clean = parsed_url.netloc.replace('www.', '', 1)
-        base_domain_clean = self.base_domain.replace('www.', '', 1)
-        return url_domain_clean == base_domain_clean
+        
+        url_domain = parsed_url.netloc.lower()
+        base_domain = self.base_domain.lower() if self.base_domain else ''
+        
+        # Remove 'www.' prefix if present at the start
+        url_domain_clean = url_domain[4:] if url_domain.startswith('www.') else url_domain
+        base_domain_clean = base_domain[4:] if base_domain.startswith('www.') else base_domain
+        
+        # Only consider internal if both domains are non-empty and match
+        return (url_domain_clean and base_domain_clean and 
+                url_domain_clean == base_domain_clean)
 
     def add_url(self, url, depth):
         """Add a URL to the discovery queue"""
