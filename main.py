@@ -667,6 +667,101 @@ def debug_memory_page():
     """Debug page with nice UI for memory monitoring"""
     return render_template('debug_memory.html')
 
+@app.route('/api/import_bulk_urls', methods=['POST'])
+@login_required
+def import_bulk_urls():
+    """Import multiple URLs from various formats (sitemap XML, plain URLs, Excel/CSV paste)"""
+    import re
+    import xml.etree.ElementTree as ET
+    from urllib.parse import urlparse
+    
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    
+    if not content:
+        return jsonify({'success': False, 'error': 'No content provided'})
+    
+    urls = []
+    base_url = None
+    
+    try:
+        # Try to parse as XML (sitemap)
+        if '<' in content and '>' in content:
+            try:
+                root = ET.fromstring(content)
+                # Remove namespace prefixes
+                for elem in root.iter():
+                    if '}' in elem.tag:
+                        elem.tag = elem.tag.split('}')[1]
+                
+                # Extract URLs from <loc> tags
+                for loc in root.findall('.//loc'):
+                    if loc.text:
+                        urls.append(loc.text.strip())
+                
+                if urls:
+                    print(f"Parsed {len(urls)} URLs from sitemap XML")
+            except ET.ParseError:
+                pass  # Not valid XML, try other methods
+        
+        # If no URLs found yet, try line-by-line parsing
+        if not urls:
+            lines = content.split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                
+                # Try to extract URLs from various formats
+                # Handle Excel/CSV paste (tab or comma separated)
+                parts = re.split(r'[\t,;]', line)
+                
+                for part in parts:
+                    part = part.strip().strip('"\'')
+                    
+                    # Check if it looks like a URL
+                    if part.startswith('http://') or part.startswith('https://') or '.' in part:
+                        # Normalize URL
+                        if not part.startswith('http'):
+                            part = 'https://' + part
+                        
+                        # Validate URL format
+                        try:
+                            parsed = urlparse(part)
+                            if parsed.scheme and parsed.netloc:
+                                urls.append(part)
+                        except:
+                            continue
+        
+        if not urls:
+            return jsonify({'success': False, 'error': 'No valid URLs found in the content'})
+        
+        # Deduplicate URLs
+        urls = list(dict.fromkeys(urls))
+        
+        # Get base domain from first URL
+        if urls:
+            parsed = urlparse(urls[0])
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+        
+        # Store URLs in session for use by start_crawl
+        session['bulk_import_urls'] = urls
+        session['bulk_import_base_url'] = base_url
+        
+        print(f"Bulk import: {len(urls)} URLs prepared for crawling")
+        
+        return jsonify({
+            'success': True,
+            'count': len(urls),
+            'base_url': base_url
+        })
+        
+    except Exception as e:
+        print(f"Error in bulk import: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/start_crawl', methods=['POST'])
 @login_required
 def start_crawl():
@@ -709,6 +804,22 @@ def start_crawl():
 
     # Pass user_id and session_id for database persistence
     success, message = crawler.start_crawl(url, user_id=user_id, session_id=session_id)
+    
+    # If bulk URLs were imported, add them after crawl initialization
+    if success and 'bulk_import_urls' in session:
+        bulk_urls = session.pop('bulk_import_urls', [])
+        session.pop('bulk_import_base_url', None)
+        
+        print(f"Adding {len(bulk_urls)} bulk imported URLs to crawl queue")
+        
+        # Add all bulk URLs at depth 0
+        if crawler.link_manager:
+            for bulk_url in bulk_urls:
+                crawler.link_manager.add_url(bulk_url, 0)
+            
+            # Update stats
+            crawler.stats['discovered'] = crawler.link_manager.get_stats()['discovered']
+            print(f"Total URLs in queue after bulk import: {crawler.stats['discovered']}")
 
     # Store crawl_id in session
     if success and crawler.crawl_id:

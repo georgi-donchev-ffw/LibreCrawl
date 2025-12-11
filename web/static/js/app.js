@@ -2616,3 +2616,69 @@ function triggerFireworks() {
 
     animate();
 }
+
+// Bulk URL Import Functions
+function toggleBulkImport() {
+    const container = document.getElementById('bulkImportContainer');
+    const isHidden = container.style.display === 'none';
+    container.style.display = isHidden ? 'block' : 'none';
+    
+    if (isHidden) {
+        document.getElementById('bulkUrlInput').focus();
+        document.getElementById('bulkImportStatus').textContent = '';
+    } else {
+        document.getElementById('bulkUrlInput').value = '';
+    }
+}
+
+async function importBulkUrls() {
+    const textarea = document.getElementById('bulkUrlInput');
+    const statusSpan = document.getElementById('bulkImportStatus');
+    const input = textarea.value.trim();
+    
+    if (!input) {
+        statusSpan.textContent = '⚠️ Please paste some content';
+        statusSpan.style.color = '#ef4444';
+        return;
+    }
+    
+    statusSpan.textContent = 'Processing...';
+    statusSpan.style.color = '#3b82f6';
+    
+    try {
+        const response = await fetch('/api/import_bulk_urls', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content: input })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            statusSpan.textContent = `✓ ${result.count} URLs imported successfully!`;
+            statusSpan.style.color = '#10b981';
+            
+            // Clear textarea
+            textarea.value = '';
+            
+            // Auto-hide after 2 seconds and start crawl
+            setTimeout(() => {
+                toggleBulkImport();
+                
+                // Set base URL and start crawl
+                if (result.base_url) {
+                    document.getElementById('urlInput').value = result.base_url;
+                    startCrawl();
+                }
+            }, 2000);
+        } else {
+            statusSpan.textContent = `✗ ${result.error}`;
+            statusSpan.style.color = '#ef4444';
+        }
+    } catch (error) {
+        statusSpan.textContent = `✗ Error: ${error.message}`;
+        statusSpan.style.color = '#ef4444';
+    }
+}

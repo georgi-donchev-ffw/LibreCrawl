@@ -57,8 +57,34 @@
                         </svg>
                         Clear
                     </button>
+                    <button class="btn btn-info" onclick="toggleBulkImport()" title="Import multiple URLs">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                        </svg>
+                        Bulk Import
+                    </button>
                 </div>
             </div>
+            
+            <!-- Bulk Import Section -->
+            <div class="bulk-import-container" id="bulkImportContainer" style="display: none; margin-top: 15px;">
+                <div style="background: #1f2937; border-radius: 8px; padding: 20px; border: 1px solid #374151;">
+                    <h3 style="margin: 0 0 10px 0; color: #3b82f6; font-size: 16px;">Bulk URL Import</h3>
+                    <p style="margin: 0 0 15px 0; color: #9ca3af; font-size: 13px;">Paste sitemap XML, plain URLs (one per line), or Excel data</p>
+                    <textarea id="bulkUrlInput" rows="10" placeholder="Paste here:
+• Sitemap XML (will extract <loc> tags)
+• Plain URLs:
+  https://example.com/page1
+  https://example.com/page2
+• Excel/CSV data (first URL column detected)" style="width: 100%; padding: 12px; background: #111827; border: 1px solid #374151; border-radius: 6px; color: #e5e7eb; font-family: monospace; font-size: 13px; resize: vertical;"></textarea>
+                    <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-primary" onclick="importBulkUrls()">Import URLs</button>
+                        <button class="btn btn-secondary" onclick="toggleBulkImport()">Cancel</button>
+                        <span id="bulkImportStatus" style="color: #9ca3af; font-size: 13px;"></span>
+                    </div>
+                </div>
+            </div>
+            
             <div class="progress-container" id="progressContainer" style="display: none;">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -1017,8 +1043,8 @@
 
                     <div class="setting-group">
                         <label for="customHeaders">Custom Headers</label>
-                        <textarea id="customHeaders" rows="4" placeholder="Header-Name: Header-Value&#10;Another-Header: Another-Value"></textarea>
-                        <span class="setting-help">Additional HTTP headers to send (one per line)</span>
+                        <textarea id="customHeaders" rows="8" placeholder="# Automatic headers (always sent):&#10;# Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8&#10;# Accept-Encoding: gzip, deflate, br&#10;# Connection: keep-alive&#10;# Upgrade-Insecure-Requests: 1&#10;# Sec-Fetch-Dest: document&#10;# Sec-Fetch-Mode: navigate&#10;# Sec-Fetch-Site: none&#10;# Sec-Fetch-User: ?1&#10;# Cache-Control: max-age=0&#10;# DNT: 1&#10;#&#10;# Note: User-Agent and Accept-Language are set in Requests tab above&#10;#&#10;# Add your custom headers below (one per line):&#10;# Referer: https://example.com&#10;# X-Custom-Header: Custom-Value"></textarea>
+                        <span class="setting-help">Additional HTTP headers to send (one per line). User-Agent and Accept-Language are configured in the Requests tab above.</span>
                     </div>
                 </div>
             </div>

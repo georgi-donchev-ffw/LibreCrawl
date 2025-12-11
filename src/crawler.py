@@ -32,8 +32,20 @@ class WebCrawler:
     def __init__(self, crawl_id=None, resume_from_db=False):
         # HTTP session
         self.session = requests.Session()
+        # Set comprehensive browser-like headers to avoid bot detection
         self.session.headers.update({
-            'User-Agent': 'LibreCrawl/1.0 (Web Crawler)'
+            'User-Agent': 'LibreCrawl/1.0 (Web Crawler)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+            'DNT': '1'
         })
 
         # Base URL tracking
@@ -280,12 +292,14 @@ class WebCrawler:
 
         self.rate_limiter = RateLimiter(requests_per_second)
         self.link_manager = LinkManager(self.base_domain)
-        self.sitemap_parser = SitemapParser(self.session, self.base_domain, self.config['timeout'])
         self.issue_detector = IssueDetector(self.config.get('issue_exclusion_patterns', []))
 
         # Initialize JS renderer if needed
         if self.config.get('enable_javascript', False):
             self.js_renderer = JavaScriptRenderer(self.config)
+        
+        # Initialize sitemap parser with JS renderer if available (for Cloudflare bypass)
+        self.sitemap_parser = SitemapParser(self.session, self.base_domain, self.config['timeout'], self.js_renderer)
 
     def _reset_state(self):
         """Reset crawler state"""
@@ -314,7 +328,9 @@ class WebCrawler:
         filtered_count = 0
 
         for url in sitemap_urls:
-            if self._should_crawl_url(url, depth=0):
+            # Use less strict filtering for sitemap URLs - only check if internal/external policy allows it
+            # Skip extension and pattern filtering since these are explicitly listed in sitemaps
+            if self._should_crawl_sitemap_url(url, depth=0):
                 self.link_manager.add_url(url, 0)
                 added_count += 1
             else:
@@ -633,15 +649,27 @@ class WebCrawler:
         """Update crawler configuration"""
         self.config.update(new_config)
 
-        # Update session headers
+        # Update session headers with comprehensive browser-like headers
         self.session.headers.update({
             'User-Agent': self.config['user_agent'],
-            'Accept-Language': self.config['accept_language']
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': self.config['accept_language'],
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+            'DNT': '1'
         })
 
-        # Add custom headers
+        # Add custom headers (these will override defaults if specified)
         if self.config['custom_headers']:
             self.session.headers.update(self.config['custom_headers'])
+        
+        print(f"Session headers updated. User-Agent: {self.session.headers.get('User-Agent')}")
 
         # Configure proxy if enabled
         if self.config['enable_proxy'] and self.config['proxy_url']:
@@ -1189,6 +1217,33 @@ class WebCrawler:
                 updated_count += 1
 
         print(f"Updated linked_from data for {updated_count} URLs")
+
+    def _should_crawl_sitemap_url(self, url, depth=None):
+        """Check if sitemap URL should be crawled (less strict than regular URLs)"""
+        parsed = urlparse(url)
+
+        # Determine whether URL is internal
+        is_internal = True
+        if self.link_manager:
+            is_internal = self.link_manager.is_internal(url)
+
+        # Check external domain policy
+        if not is_internal:
+            if not self.config['crawl_external']:
+                return False
+
+            max_external_depth = self.config.get('max_external_depth', 1)
+            if depth is not None and depth > max_external_depth:
+                return False
+
+        # Check robots.txt
+        if self.config['respect_robots']:
+            if not self._check_robots_txt(url):
+                return False
+
+        # For sitemap URLs, skip extension and pattern filtering
+        # They are explicitly listed in the sitemap so should be crawled
+        return True
 
     def _should_crawl_url(self, url, depth=None):
         """Check if URL should be crawled based on settings"""
