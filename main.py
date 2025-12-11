@@ -305,9 +305,10 @@ def generate_csv_export(urls, fields):
             elif field == 'external_links' and isinstance(value, (int, float)):
                 row[field] = f"{int(value)} external links" if value else '0 external links'
             elif field == 'is_internal':
-                if value is True:
+                # Use equality comparison to handle both booleans and integers (from SQLite)
+                if value == True or value == 1:
                     row[field] = 'Internal'
-                elif value is False:
+                elif value == False or value == 0:
                     row[field] = 'External'
                 else:
                     row[field] = ''
@@ -368,11 +369,12 @@ def generate_links_csv_export(links):
     writer.writeheader()
 
     for link in links:
+        is_internal_value = link.get('is_internal')
         row = {
             'source_url': link.get('source_url', ''),
             'target_url': link.get('target_url', ''),
             'anchor_text': link.get('anchor_text', ''),
-            'is_internal': 'Yes' if link.get('is_internal') else 'No',
+            'is_internal': 'Yes' if (is_internal_value == True or is_internal_value == 1) else 'No',
             'target_domain': link.get('target_domain', ''),
             'target_status': link.get('target_status', 'Not crawled'),
             'placement': link.get('placement', 'body'),
